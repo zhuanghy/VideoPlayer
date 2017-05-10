@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -31,7 +32,7 @@ public class MainActivity extends Activity {
 
     private VideoView videoView;
     private LinearLayout controller_layout;
-    private ImageView play_controller_img,screen_img,volume_img;
+    private ImageView play_controller_img,screen_img,volume_img,exit;
     private TextView time_current_tv,time_total_tv;
     private SeekBar volume_seek,play_seek;
     public static final int UPDATE_UI = 1;
@@ -55,11 +56,17 @@ public class MainActivity extends Activity {
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         initUI();
         setPlayerEvent();
+
+        //本地视频播放
         String path = Environment.getExternalStorageDirectory().getAbsolutePath()+"/22.mp4";
         Log.e("Main","path: "+path);
         videoView.setVideoPath(path);
-//        videoView.start();
+
+        //网络视频播放
+//        videoView.setVideoURI(Uri.parse("http://www.tangoh.cn/22.mp4"));
+
         UIHandler.sendEmptyMessage(UPDATE_UI);
+        videoView.start();
 
     }
 
@@ -107,6 +114,7 @@ public class MainActivity extends Activity {
         }
     };
 
+
     /**
      * 暂停播放时停止刷新
      */
@@ -119,9 +127,17 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
     }
 
     private void setPlayerEvent() {
+
+        exit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
 
         /**
          * 暂停开始按钮控制
@@ -226,6 +242,8 @@ public class MainActivity extends Activity {
                      * 手指落下屏幕的那一刻（只会调用一次）
                      */
                     case MotionEvent.ACTION_DOWN: {
+                        controller_layout.setVisibility(View.VISIBLE);
+                        exit.setVisibility(View.VISIBLE);
                         lastX = x;
                         lastY = y;
                         Log.e("Main", "x" + lastX);
@@ -293,6 +311,14 @@ public class MainActivity extends Activity {
                      * 手指离开屏幕的那一刻(只调用一次)
                      */
                     case MotionEvent.ACTION_UP: {
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                controller_layout.setVisibility(View.GONE);
+                                exit.setVisibility(View.GONE);
+                            }
+                        },6000);
+
                         progress_layout.setVisibility(View.GONE);
                         break;
                     }
@@ -391,21 +417,24 @@ public class MainActivity extends Activity {
      * 初始化UI布局
      */
     private void initUI() {
-        videoView = (VideoView) findViewById(R.id.videobView);
+        videoLayout = (RelativeLayout) findViewById(R.id.videoLayout);
         controller_layout = (LinearLayout) findViewById(R.id.contrallerbar_layout);
+        videoView = (VideoView) findViewById(R.id.videobView);
+        exit = (ImageView) findViewById(R.id.exit);
         play_controller_img = (ImageView) findViewById(R.id.pause_img);
-        screen_img = (ImageView) findViewById(R.id.screen_img);
+        play_seek = (SeekBar) findViewById(R.id.play_seek);
         time_current_tv = (TextView) findViewById(R.id.time_current_tv);
         time_total_tv = (TextView) findViewById(R.id.time_total_tv);
-        volume_seek = (SeekBar) findViewById(R.id.volume_seek);
-        play_seek = (SeekBar) findViewById(R.id.play_seek);
-        videoLayout = (RelativeLayout) findViewById(R.id.videoLayout);
         volume_img = (ImageView) findViewById(R.id.volume_img);
+        volume_seek = (SeekBar) findViewById(R.id.volume_seek);
+        screen_img = (ImageView) findViewById(R.id.screen_img);
         screen_width = getResources().getDisplayMetrics().widthPixels;
         screen_height = getResources().getDisplayMetrics().heightPixels;
+        progress_layout = (FrameLayout) findViewById(R.id.progerss_layout);
         operation_bg = (ImageView) findViewById(R.id.opertion_bg);
         operation_percent = (ImageView) findViewById(R.id.operation_percent);
-        progress_layout = (FrameLayout) findViewById(R.id.progerss_layout);
+
+
         /**
          * 当前设备的最大音量
          */
@@ -416,9 +445,7 @@ public class MainActivity extends Activity {
         int streamVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
         volume_seek.setMax(streamMaxVolume);
         volume_seek.setProgress(streamVolume);
-        if(videoView.getCurrentPosition() == 0 ){
-            play_controller_img.setImageResource(R.drawable.start_video_df);
-        }
+
 
     }
 }
